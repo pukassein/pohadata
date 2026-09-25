@@ -4,23 +4,15 @@ PohãData is a static-first prototype for exploring medicinal plants traditional
 
 ## Run locally
 
-This prototype has no database, authentication, API, or build dependency. With Python 3 available:
+The project includes a small Node.js backend that serves the frontend and keeps PostgreSQL access server-side. Put DATABASE_URL in the local environment file with your SSH-tunnel connection string.
 
-```bash
+Install dependencies and start the app:
+
+npm install
 npm run dev
-```
 
-Then open [http://localhost:5173](http://localhost:5173).
+Then open http://localhost:5173.
 
-## Included in this prototype
+To verify the SSH tunnel and PostgreSQL connection, request http://localhost:5173/api/health/db with curl. It returns a simple status ok response when PostgreSQL is reachable, or status error with HTTP 503 otherwise. Database credentials are never sent to the browser, and .env.local is excluded from Git.
 
-- Overview dashboard with the PohãData purpose and evidence framework
-- 10 local mock plant profiles
-- Search, filtering, and sorting in the plant catalog
-- Detailed plant profiles with identification, traditional use, phytochemistry, evidence layers, and reference placeholders
-- Category/property exploration
-- 2–4 plant comparison table
-- Mixture builder with clearly labelled demonstration amounts
-- About / methodology page with scientific transparency language
-
-The interface uses hash-based navigation, so it can be served as a static site without a special server fallback. Plant data is kept in `src/data.js` so a future database or API adapter can replace it without changing the page structure.
+The existing frontend remains static-first and uses local mock plant data. No application tables, authentication, or migrations were added.
