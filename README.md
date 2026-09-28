@@ -1,18 +1,36 @@
 # PohãData
 
-PohãData is a static-first prototype for exploring medicinal plants traditionally used in Paraguay and the different kinds of evidence documented about them.
+PohãData es una aplicación orientada a la investigación sobre plantas tradicionalmente utilizadas en Paraguay. La aplicación pública y el panel de administración leen y escriben perfiles en PostgreSQL.
 
-## Run locally
+## Desarrollo local
 
-The project includes a small Node.js backend that serves the frontend and keeps PostgreSQL access server-side. Put DATABASE_URL in the local environment file with your SSH-tunnel connection string.
+Configura `.env.local` (no se versiona):
 
-Install dependencies and start the app:
+```env
+DATABASE_URL=postgresql://...
+ADMIN_PASSWORD=tu-contraseña-local
+```
 
+Después ejecuta:
+
+```bash
 npm install
+npm run db:setup
+npm run db:seed
 npm run dev
+```
 
-Then open http://localhost:5173.
+Abre <http://localhost:5173>. El enlace discreto “Administración” del pie de página abre el panel. La contraseña solo se valida en el servidor y la sesión usa una cookie HttpOnly.
 
-To verify the SSH tunnel and PostgreSQL connection, request http://localhost:5173/api/health/db with curl. It returns a simple status ok response when PostgreSQL is reachable, or status error with HTTP 503 otherwise. Database credentials are never sent to the browser, and .env.local is excluded from Git.
+## Base de datos
 
-The existing frontend remains static-first and uses local mock plant data. No application tables, authentication, or migrations were added.
+`db/schema.sql` documenta el modelo relacional: plantas, partes, sinónimos, preparaciones, usos tradicionales, compuestos, valores cuantitativos, actividades, registros de evidencia y referencias. `npm run db:seed` importa los diez perfiles que antes estaban en `src/data.js`; el archivo se conserva como referencia histórica, pero no es la fuente de datos de la aplicación.
+
+La importación es idempotente para los identificadores iniciales y reemplaza únicamente los registros relacionados de esos mismos perfiles. No inventa valores cuantitativos: los campos quedan vacíos hasta que se ingrese un dato respaldado por una fuente.
+
+## API
+
+- `GET /api/plants` y `GET /api/plants/:id` — lectura pública.
+- `POST /api/plants`, `PUT /api/plants/:id`, `DELETE /api/plants/:id` — requieren sesión de administración.
+- `POST /api/admin/login`, `POST /api/admin/logout`, `GET /api/session` — sesión del panel.
+- `GET /api/health/db` — estado de la conexión.
