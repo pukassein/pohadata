@@ -25,14 +25,25 @@ const icons = {
   external: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>',
 };
 
+cleanLegacyHash();
 const state = { plants: [], loading: true, error: '', route: getRoute(), search: '', filter: 'Todas', sort: 'A–Z', compare: [], mixture: [], compareOpen: false, mobileMenu: false, admin: false, editor: null, adminSearch: '' };
 
-function getRoute() {
-  const parts = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  return { page: parts[0] || 'home', id: parts[1] || '', sub: parts[2] || '' };
+function cleanLegacyHash() {
+  if (!window.location.hash.startsWith("#/")) return;
+  const legacyPath = window.location.hash.slice(1) || "/";
+  window.history.replaceState(null, "", legacyPath === "/home" ? "/" : legacyPath);
 }
-function navigate(path) { window.location.hash = `#/${path}`; state.route = getRoute(); state.mobileMenu = false; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-window.addEventListener('hashchange', () => { state.route = getRoute(); render(); });
+function getRoute() {
+  const pathname = window.location.pathname.replace(/^\/+|\/+$/g, "");
+  const parts = pathname.split("/").filter(Boolean);
+  return { page: parts[0] || "home", id: parts[1] || "", sub: parts[2] || "" };
+}
+function navigate(path) {
+  const destination = !path || path === "home" ? "/" : `/${path}`;
+  if (window.location.pathname !== destination) window.history.pushState({}, "", destination);
+  state.route = getRoute(); state.mobileMenu = false; render(); window.scrollTo({ top: 0, behavior: "smooth" });
+}
+window.addEventListener("popstate", () => { state.route = getRoute(); render(); });
 function icon(name, className = '') { return `<span class="icon ${className}">${icons[name] || ''}</span>`; }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' }[char])); }
 function getPlant(id) { return state.plants.find((plant) => plant.id === id || plant.slug === id); }

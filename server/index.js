@@ -117,6 +117,10 @@ app.delete('/api/plants/:id', requireAdmin, async (request, response, next) => {
 });
 
 app.use(express.static(publicRoot));
+app.use((request, response, next) => {
+  if (request.method === "GET" && !request.path.startsWith("/api/") && !path.extname(request.path) && request.accepts("html")) return response.sendFile(path.join(publicRoot, "index.html"));
+  next();
+});
 app.use((error, _request, response, _next) => {
   console.error(error);
   const status = /obligatorios|existe|no existe|identificador/.test(error.message) ? 400 : 500;
