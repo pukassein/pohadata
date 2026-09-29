@@ -4,6 +4,7 @@
   "private": true,
   "description": "PohãData — a research-oriented guide to Paraguayan medicinal plants.",
   "scripts": {
+    "build": "node scripts/build-frontend.js",
     "dev": "node server/index.js",
     "start": "node server/index.js",
     "db:setup": "node scripts/setup-db.js",

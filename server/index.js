@@ -13,7 +13,31 @@ const port = Number(process.env.PORT) || 5173;
 const publicRoot = path.resolve(__dirname, '..');
 const sessions = new Map();
 const sessionMaxAge = 1000 * 60 * 60 * 8;
+const allowedFrontendOrigins = new Set(String(process.env.FRONTEND_ORIGIN || "").split(",").map((origin) => origin.trim().replace(new RegExp("/+$"), "")).filter(Boolean));
+const sessionSameSite = allowedFrontendOrigins.size ? "None" : "Lax";
+const sessionSecure = sessionSameSite === "None" || process.env.NODE_ENV === "production";
 
+function sessionCookieAttributes(maxAge) { return "HttpOnly; SameSite=" + sessionSameSite + "; Path=/; Max-Age=" + maxAge + (sessionSecure ? "; Secure" : ""); }
+
+function applyCors(request, response, next) {
+  const origin = request.headers.origin;
+  if (!origin) return next();
+  if (!allowedFrontendOrigins.has(origin)) {
+    if (request.method === "OPTIONS") return response.status(403).end();
+    return next();
+  }
+  response.setHeader("Access-Control-Allow-Origin", origin);
+  response.setHeader("Access-Control-Allow-Credentials", "true");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  response.setHeader("Access-Control-Max-Age", "600");
+  response.setHeader("Vary", "Origin");
+  if (request.method === "OPTIONS") return response.status(204).end();
+  next();
+}
+
+
+app.use(applyCors);
 app.use(express.json({ limit: '1mb' }));
 
 function parseCookies(request) {
@@ -54,14 +78,14 @@ app.post('/api/admin/login', (request, response) => {
   if (!safePasswordEqual(request.body?.password, process.env.ADMIN_PASSWORD)) return response.status(401).json({ error: 'Contraseña incorrecta.' });
   const token = crypto.randomBytes(32).toString('hex');
   sessions.set(token, Date.now() + sessionMaxAge);
-  response.setHeader('Set-Cookie', `pohadata_admin=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${sessionMaxAge / 1000}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+  response.setHeader("Set-Cookie", `pohadata_admin=${token}; ${sessionCookieAttributes(sessionMaxAge / 1000)}`);
   response.json({ authenticated: true });
 });
 
 app.post('/api/admin/logout', (request, response) => {
   const token = parseCookies(request).pohadata_admin;
   if (token) sessions.delete(token);
-  response.setHeader('Set-Cookie', 'pohadata_admin=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');
+  response.setHeader("Set-Cookie", "pohadata_admin=; " + sessionCookieAttributes(0));
   response.json({ authenticated: false });
 });
 
