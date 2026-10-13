@@ -51,7 +51,7 @@ function evidence(id) { return evidenceTypes.find((item) => item.id === id) || e
 function evidenceBadge(id, compact = false) { const item = evidence(id); return `<span class="evidence-badge ${item.color} ${compact ? 'compact' : ''}"><span class="evidence-dot"></span>${compact ? item.short : item.label}</span>`; }
 function unavailable() { return '<span class="unavailable">Información no disponible actualmente.</span>'; }
 function button(label, action, cls = 'button secondary', iconName = '') { return `<button class="${cls}" data-action="${action}">${iconName ? icon(iconName) : ''}${label}</button>`; }
-function plantVisual(plant, size = 'medium') { const initials = (plant.commonName || '?').split(/\s+/).map((word) => word[0]).join('').slice(0, 2).toUpperCase(); return `<div class="plant-visual ${size} ${escapeHtml(plant.visualColor || 'green')}">${plant.image?.url ? `<img src="${escapeHtml(plant.image.url)}" alt="${escapeHtml(plant.image.caption || plant.commonName)}"/>` : `${icon('leaf', 'visual-leaf')}<span class="visual-initials">${escapeHtml(initials)}</span>`}</div>`; }
+function plantVisual(plant, size = 'medium') { const initials = (plant.commonName || '?').split(/\s+/).map((word) => word[0]).join('').slice(0, 2).toUpperCase(); const position = `${Number(plant.image?.positionX ?? 50)}% ${Number(plant.image?.positionY ?? 50)}%`; return `<div class="plant-visual ${size} ${escapeHtml(plant.visualColor || 'green')}">${plant.image?.url ? `<img src="${escapeHtml(plant.image.url)}" alt="${escapeHtml(plant.image.caption || plant.commonName)}" style="object-position:${position}"/>` : `${icon('leaf', 'visual-leaf')}<span class="visual-initials">${escapeHtml(initials)}</span>`}</div>`; }
 
 function shell(content) {
   const page = state.route.page;
@@ -142,10 +142,46 @@ function collectPlantForm(form) {
   const value = (name) => form.querySelector(`[name="${name}"]`)?.value?.trim() || '';
   const parseList = (name) => value(name).split(',').map((item) => item.trim()).filter(Boolean);
   const compounds = collectRepeater(form, 'compounds').map((item, index) => ({ ...item, qualitativeIdentified: Boolean(item.qualitativelyIdentified), qualitativelyIdentified: Boolean(item.qualitativelyIdentified), quantitativeValues: [...form.querySelectorAll(`[data-repeat-item="compounds"]`)][index] ? [...[...form.querySelectorAll(`[data-repeat-item="compounds"]`)][index].querySelectorAll('[data-quantity-list] .quantity-row')].map((row) => Object.fromEntries([...row.querySelectorAll('input')].map((field) => [field.name, field.value.trim()]))): [] }));
-  return { commonName: value('commonName'), guaraniName: value('guaraniName'), scientificName: value('scientificName'), family: value('family'), slug: value('slug'), description: value('description'), synonyms: parseList('synonyms'), parts: parseList('parts'), image: { url: value('imageUrl'), caption: value('imageCaption'), credit: value('imageCredit'), license: value('imageLicense') }, preparations: collectRepeater(form, 'preparations'), traditionalUses: collectRepeater(form, 'traditionalUses'), compounds, activities: collectRepeater(form, 'activities'), evidence: collectRepeater(form, 'evidence').map((item) => ({ ...item, activityIndex: item.activityIndex === '' ? null : Number(item.activityIndex), compoundIndex: item.compoundIndex === '' ? null : Number(item.compoundIndex), traditionalUseIndex: item.traditionalUseIndex === '' ? null : Number(item.traditionalUseIndex), referenceIndex: item.referenceIndex === '' ? null : Number(item.referenceIndex) })), references: collectRepeater(form, 'references') };
+  return { commonName: value('commonName'), guaraniName: value('guaraniName'), scientificName: value('scientificName'), family: value('family'), slug: value('slug'), description: value('description'), synonyms: parseList('synonyms'), parts: parseList('parts'), image: { url: value('imageUrl'), caption: value('imageCaption'), credit: value('imageCredit'), license: value('imageLicense'), positionX: Number(value('imagePositionX') || 50), positionY: Number(value('imagePositionY') || 50) }, preparations: collectRepeater(form, 'preparations'), traditionalUses: collectRepeater(form, 'traditionalUses'), compounds, activities: collectRepeater(form, 'activities'), evidence: collectRepeater(form, 'evidence').map((item) => ({ ...item, activityIndex: item.activityIndex === '' ? null : Number(item.activityIndex), compoundIndex: item.compoundIndex === '' ? null : Number(item.compoundIndex), traditionalUseIndex: item.traditionalUseIndex === '' ? null : Number(item.traditionalUseIndex), referenceIndex: item.referenceIndex === '' ? null : Number(item.referenceIndex) })), references: collectRepeater(form, 'references') };
+}
+
+function setupImagePreview() {
+  const form = document.querySelector('[data-plant-editor]');
+  const urlInput = form?.querySelector('[name="imageUrl"]');
+  const section = urlInput?.closest('.admin-section');
+  if (!form || !urlInput || !section || section.querySelector('[data-image-editor]')) return;
+  const plant = getPlant(form.dataset.plantId) || { commonName: 'Vista de miniatura', image: {} };
+  const positionX = Number(plant.image?.positionX ?? 50);
+  const positionY = Number(plant.image?.positionY ?? 50);
+  section.querySelector('.form-grid')?.insertAdjacentHTML('afterend', `<div class="image-editor" data-image-editor><div class="image-preview-wrap"><span class="eyebrow">Vista en el catálogo</span><div class="image-card-preview"><div class="plant-visual medium image-position-surface" data-position-surface title="Arrastra para elegir el punto focal"><img data-image-preview src="${escapeHtml(urlInput.value)}" alt="Vista previa" style="object-position:${positionX}% ${positionY}%"/><span class="image-focus-marker" data-focus-marker aria-hidden="true"></span><div class="image-preview-empty">Pega una URL para ver la imagen</div></div><strong>${escapeHtml(plant.commonName || 'Vista de miniatura')}</strong><em>${escapeHtml(plant.scientificName || 'Nombre científico')}</em></div></div><div class="image-position-controls"><span class="eyebrow">Encuadre</span><p>Arrastra sobre la imagen o usa los controles hasta que la parte importante quede visible en la miniatura.</p><label>Horizontal <output data-position-output="x">${positionX}%</output><input name="imagePositionX" type="range" min="0" max="100" value="${positionX}"/></label><label>Vertical <output data-position-output="y">${positionY}%</output><input name="imagePositionY" type="range" min="0" max="100" value="${positionY}"/></label><button type="button" class="link-button" data-reset-image-position>Centrar imagen</button></div></div>`);
+  const preview = section.querySelector('[data-image-preview]');
+  const empty = section.querySelector('.image-preview-empty');
+  const update = () => {
+    const x = form.querySelector('[name="imagePositionX"]').value;
+    const y = form.querySelector('[name="imagePositionY"]').value;
+    preview.src = urlInput.value.trim();
+    preview.style.objectPosition = `${x}% ${y}%`;
+    preview.hidden = !urlInput.value.trim();
+    empty.hidden = Boolean(urlInput.value.trim());
+    section.querySelector('[data-focus-marker]').hidden = !urlInput.value.trim();
+    section.querySelector('[data-focus-marker]').style.left = `${x}%`;
+    section.querySelector('[data-focus-marker]').style.top = `${y}%`;
+    section.querySelector('[data-position-output="x"]').textContent = `${x}%`;
+    section.querySelector('[data-position-output="y"]').textContent = `${y}%`;
+  };
+  urlInput.addEventListener('input', update);
+  section.querySelectorAll('input[type="range"]').forEach((range) => range.addEventListener('input', update));
+  const surface = section.querySelector('[data-position-surface]');
+  const moveFocus = (event) => { const bounds = surface.getBoundingClientRect(); form.querySelector('[name="imagePositionX"]').value = Math.round(Math.min(100, Math.max(0, (event.clientX - bounds.left) / bounds.width * 100))); form.querySelector('[name="imagePositionY"]').value = Math.round(Math.min(100, Math.max(0, (event.clientY - bounds.top) / bounds.height * 100))); update(); };
+  surface.addEventListener('pointerdown', (event) => { surface.setPointerCapture(event.pointerId); moveFocus(event); });
+  surface.addEventListener('pointermove', (event) => { if (surface.hasPointerCapture(event.pointerId)) moveFocus(event); });
+  section.querySelector('[data-reset-image-position]').addEventListener('click', () => { form.querySelector('[name="imagePositionX"]').value = 50; form.querySelector('[name="imagePositionY"]').value = 50; update(); });
+  preview.addEventListener('error', () => { preview.hidden = true; empty.hidden = false; empty.textContent = 'No se pudo cargar esta imagen'; });
+  update();
 }
 
 function bindEvents() {
+  setupImagePreview();
   document.querySelectorAll('[data-action]').forEach((element) => element.addEventListener('click', async () => {
     const action = element.dataset.action;
     if (action === 'toggle-menu') { state.mobileMenu = !state.mobileMenu; render(); return; }

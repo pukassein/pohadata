@@ -14,9 +14,15 @@ CREATE TABLE IF NOT EXISTS plants (
   image_caption text,
   image_credit text,
   image_license text,
+  image_position_x numeric NOT NULL DEFAULT 50 CHECK (image_position_x BETWEEN 0 AND 100),
+  image_position_y numeric NOT NULL DEFAULT 50 CHECK (image_position_y BETWEEN 0 AND 100),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Backward-compatible focal point support for databases created before this feature.
+ALTER TABLE plants ADD COLUMN IF NOT EXISTS image_position_x numeric NOT NULL DEFAULT 50;
+ALTER TABLE plants ADD COLUMN IF NOT EXISTS image_position_y numeric NOT NULL DEFAULT 50;
 
 CREATE TABLE IF NOT EXISTS plant_synonyms (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

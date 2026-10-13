@@ -58,7 +58,7 @@ async function hydratePlant(queryable, row) {
     scientificName: row.scientific_name,
     family: row.botanical_family || '',
     description: row.description || '',
-    image: { url: row.image_url || '', caption: row.image_caption || '', credit: row.image_credit || '', license: row.image_license || '' },
+    image: { url: row.image_url || '', caption: row.image_caption || '', credit: row.image_credit || '', license: row.image_license || '', positionX: Number(row.image_position_x ?? 50), positionY: Number(row.image_position_y ?? 50) },
     synonyms: synonyms.rows.map((item) => item.name),
     parts: parts.rows.map((item) => item.name),
     preparations: preparations.rows.map((item) => ({ name: item.name, notes: item.notes || '' })),
@@ -84,6 +84,7 @@ async function getPlant(idOrSlug) {
 }
 
 function valueOrNull(value) { return value === '' || value === undefined || value === null ? null : value; }
+function imagePosition(value) { const number = Number(value); return Number.isFinite(number) ? Math.min(100, Math.max(0, number)) : 50; }
 function indexValue(value, values) {
   if (value === null || value === undefined || value === '') return null;
   if (Number.isInteger(value)) return values[value]?.id || null;
@@ -102,7 +103,7 @@ async function savePlant(input, id = null) {
     if (duplicate.rows.length) throw new Error('Ya existe una planta con ese identificador.');
     let plantRow;
     if (id) {
-      const updated = await client.query(`UPDATE plants SET slug=$1, common_name=$2, guarani_name=$3, scientific_name=$4, botanical_family=$5, description=$6, image_url=$7, image_caption=$8, image_credit=$9, image_license=$10 WHERE id=$11 RETURNING *`, [slug, commonName, valueOrNull(input.guaraniName), scientificName, valueOrNull(input.family), valueOrNull(input.description), valueOrNull(input.image?.url), valueOrNull(input.image?.caption), valueOrNull(input.image?.credit), valueOrNull(input.image?.license), id]);
+      const updated = await client.query(`UPDATE plants SET slug=$1, common_name=$2, guarani_name=$3, scientific_name=$4, botanical_family=$5, description=$6, image_url=$7, image_caption=$8, image_credit=$9, image_license=$10, image_position_x=$11, image_position_y=$12 WHERE id=$13 RETURNING *`, [slug, commonName, valueOrNull(input.guaraniName), scientificName, valueOrNull(input.family), valueOrNull(input.description), valueOrNull(input.image?.url), valueOrNull(input.image?.caption), valueOrNull(input.image?.credit), valueOrNull(input.image?.license), imagePosition(input.image?.positionX), imagePosition(input.image?.positionY), id]);
       if (!updated.rows.length) throw new Error('La planta no existe.');
       plantRow = updated.rows[0];
       await Promise.all([
@@ -117,7 +118,7 @@ async function savePlant(input, id = null) {
         client.query('DELETE FROM plant_references WHERE plant_id=$1', [id]),
       ]);
     } else {
-      const inserted = await client.query(`INSERT INTO plants (slug, common_name, guarani_name, scientific_name, botanical_family, description, image_url, image_caption, image_credit, image_license) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`, [slug, commonName, valueOrNull(input.guaraniName), scientificName, valueOrNull(input.family), valueOrNull(input.description), valueOrNull(input.image?.url), valueOrNull(input.image?.caption), valueOrNull(input.image?.credit), valueOrNull(input.image?.license)]);
+      const inserted = await client.query(`INSERT INTO plants (slug, common_name, guarani_name, scientific_name, botanical_family, description, image_url, image_caption, image_credit, image_license, image_position_x, image_position_y) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`, [slug, commonName, valueOrNull(input.guaraniName), scientificName, valueOrNull(input.family), valueOrNull(input.description), valueOrNull(input.image?.url), valueOrNull(input.image?.caption), valueOrNull(input.image?.credit), valueOrNull(input.image?.license), imagePosition(input.image?.positionX), imagePosition(input.image?.positionY)]);
       plantRow = inserted.rows[0];
     }
 
