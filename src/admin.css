@@ -72,3 +72,13 @@
 .quantity-list small { color:#5d8066; font-family:'DM Mono',monospace; font-size:8px; line-height:1.4; }
 .reference-row a { color:#91a097; }
 @media (max-width:800px) { .admin-header { align-items:flex-start; flex-direction:column; } .admin-header-actions { justify-content:flex-start; } .form-grid,.repeat-item { grid-template-columns:1fr; } .form-grid label:nth-child(5),.form-grid label:nth-child(6),.repeat-item > label:nth-last-of-type(1),.repeat-item > textarea:last-of-type,.checkbox-line,.nested-quant { grid-column:auto; } .quantity-row { grid-template-columns:1fr 1fr; } .footer-links { align-items:flex-start; flex-direction:column; gap:8px; } }
+
+/* Collapsible, review-first editor groups. */
+.admin-group { padding:0; }
+.admin-group > summary { margin:0; padding:18px 21px; cursor:pointer; list-style:none; align-items:center; }
+.admin-group > summary::-webkit-details-marker { display:none; }
+.admin-group > summary small { display:block; margin-top:6px; color:#98a39b; font-size:10px; }
+.admin-group > summary > .icon { color:#8a978e; transform:rotate(90deg); transition:.2s; }
+.admin-group[open] > summary > .icon { transform:rotate(-90deg); }
+.admin-group-content { padding:0 21px 21px; border-top:1px solid var(--line); }
+.admin-add { margin:14px 0; }
