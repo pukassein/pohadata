@@ -153,7 +153,7 @@ function setupImagePreview() {
   const plant = getPlant(form.dataset.plantId) || { commonName: 'Vista de miniatura', image: {} };
   const positionX = Number(plant.image?.positionX ?? 50);
   const positionY = Number(plant.image?.positionY ?? 50);
-  section.querySelector('.form-grid')?.insertAdjacentHTML('afterend', `<div class="image-editor" data-image-editor><div class="image-preview-wrap"><span class="eyebrow">Vista en el catálogo</span><div class="image-card-preview"><div class="plant-visual medium image-position-surface" data-position-surface title="Arrastra para elegir el punto focal"><img data-image-preview src="${escapeHtml(urlInput.value)}" alt="Vista previa" style="object-position:${positionX}% ${positionY}%"/><span class="image-focus-marker" data-focus-marker aria-hidden="true"></span><div class="image-preview-empty">Pega una URL para ver la imagen</div></div><strong>${escapeHtml(plant.commonName || 'Vista de miniatura')}</strong><em>${escapeHtml(plant.scientificName || 'Nombre científico')}</em></div></div><div class="image-position-controls"><span class="eyebrow">Encuadre</span><p>Arrastra sobre la imagen o usa los controles hasta que la parte importante quede visible en la miniatura.</p><label>Horizontal <output data-position-output="x">${positionX}%</output><input name="imagePositionX" type="range" min="0" max="100" value="${positionX}"/></label><label>Vertical <output data-position-output="y">${positionY}%</output><input name="imagePositionY" type="range" min="0" max="100" value="${positionY}"/></label><button type="button" class="link-button" data-reset-image-position>Centrar imagen</button></div></div>`);
+  section.querySelector('.form-grid')?.insertAdjacentHTML('afterend', `<div class="image-editor" data-image-editor><div class="image-preview-wrap"><span class="eyebrow">Vista en el catálogo</span><div class="image-card-preview"><div class="plant-visual medium image-position-surface" data-position-surface title="Haz clic y arrastra para mover la imagen"><img data-image-preview src="${escapeHtml(urlInput.value)}" alt="Vista previa" draggable="false" style="object-position:${positionX}% ${positionY}%"/><div class="image-drag-hint">Arrastra para mover</div><div class="image-preview-empty">Pega una URL para ver la imagen</div></div><strong>${escapeHtml(plant.commonName || 'Vista de miniatura')}</strong><em>${escapeHtml(plant.scientificName || 'Nombre científico')}</em></div></div><div class="image-position-controls"><span class="eyebrow">Encuadre</span><p>Haz clic sobre la foto y arrástrala como quieras que aparezca en la miniatura.</p><input name="imagePositionX" type="hidden" value="${positionX}"/><input name="imagePositionY" type="hidden" value="${positionY}"/><p class="position-status" data-position-status>Posición guardada: ${positionX}% · ${positionY}%</p><button type="button" class="button secondary small" data-reset-image-position>Centrar imagen</button></div></div>`);
   const preview = section.querySelector('[data-image-preview]');
   const empty = section.querySelector('.image-preview-empty');
   const update = () => {
@@ -163,18 +163,17 @@ function setupImagePreview() {
     preview.style.objectPosition = `${x}% ${y}%`;
     preview.hidden = !urlInput.value.trim();
     empty.hidden = Boolean(urlInput.value.trim());
-    section.querySelector('[data-focus-marker]').hidden = !urlInput.value.trim();
-    section.querySelector('[data-focus-marker]').style.left = `${x}%`;
-    section.querySelector('[data-focus-marker]').style.top = `${y}%`;
-    section.querySelector('[data-position-output="x"]').textContent = `${x}%`;
-    section.querySelector('[data-position-output="y"]').textContent = `${y}%`;
+    section.querySelector('.image-drag-hint').hidden = !urlInput.value.trim();
+    section.querySelector('[data-position-status]').textContent = `Posición guardada: ${x}% · ${y}%`;
   };
   urlInput.addEventListener('input', update);
-  section.querySelectorAll('input[type="range"]').forEach((range) => range.addEventListener('input', update));
   const surface = section.querySelector('[data-position-surface]');
-  const moveFocus = (event) => { const bounds = surface.getBoundingClientRect(); form.querySelector('[name="imagePositionX"]').value = Math.round(Math.min(100, Math.max(0, (event.clientX - bounds.left) / bounds.width * 100))); form.querySelector('[name="imagePositionY"]').value = Math.round(Math.min(100, Math.max(0, (event.clientY - bounds.top) / bounds.height * 100))); update(); };
-  surface.addEventListener('pointerdown', (event) => { surface.setPointerCapture(event.pointerId); moveFocus(event); });
-  surface.addEventListener('pointermove', (event) => { if (surface.hasPointerCapture(event.pointerId)) moveFocus(event); });
+  let dragStart = null;
+  surface.addEventListener('pointerdown', (event) => { if (!urlInput.value.trim()) return; dragStart = { x: event.clientX, y: event.clientY, positionX: Number(form.querySelector('[name="imagePositionX"]').value), positionY: Number(form.querySelector('[name="imagePositionY"]').value) }; surface.setPointerCapture(event.pointerId); surface.classList.add('dragging'); });
+  surface.addEventListener('pointermove', (event) => { if (!dragStart || !surface.hasPointerCapture(event.pointerId)) return; const bounds = surface.getBoundingClientRect(); const nextX = dragStart.positionX - (event.clientX - dragStart.x) / bounds.width * 100; const nextY = dragStart.positionY - (event.clientY - dragStart.y) / bounds.height * 100; form.querySelector('[name="imagePositionX"]').value = Math.round(Math.min(100, Math.max(0, nextX))); form.querySelector('[name="imagePositionY"]').value = Math.round(Math.min(100, Math.max(0, nextY))); update(); });
+  const endDrag = () => { dragStart = null; surface.classList.remove('dragging'); };
+  surface.addEventListener('pointerup', endDrag);
+  surface.addEventListener('pointercancel', endDrag);
   section.querySelector('[data-reset-image-position]').addEventListener('click', () => { form.querySelector('[name="imagePositionX"]').value = 50; form.querySelector('[name="imagePositionY"]').value = 50; update(); });
   preview.addEventListener('error', () => { preview.hidden = true; empty.hidden = false; empty.textContent = 'No se pudo cargar esta imagen'; });
   update();
